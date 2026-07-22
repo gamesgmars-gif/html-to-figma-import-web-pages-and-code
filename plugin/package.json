@@ -1,0 +1,14 @@
+{
+  "name": "html-to-figma-import-web-pages-and-code",
+  "version": "2.7.0",
+  "private": true,
+  "description": "Import public webpages by URL or local HTML projects into editable Figma layers across multiple viewport sizes.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.131.0",
+    "typescript": "^7.0.2"
+  }
+}

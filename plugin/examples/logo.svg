@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="252" height="68" viewBox="0 0 252 68">
+  <rect x="0" y="0" width="68" height="68" rx="18" fill="#111827"/>
+  <path d="M19 18h12v22h19v10H19V18Z" fill="#fff"/>
+  <text x="84" y="46" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#111827">LOCAL</text>
+</svg>

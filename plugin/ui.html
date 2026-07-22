@@ -1,0 +1,1741 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML to Figma - Import Web Pages and Code</title>
+  <style>
+    :root {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: dark;
+      --bg-0:#070912;
+      --bg-1:#0a0e1b;
+      --glass:rgba(23,29,49,.72);
+      --glass-strong:rgba(29,37,62,.88);
+      --line:rgba(194,205,255,.14);
+      --line-strong:rgba(194,205,255,.27);
+      --text:#f7f8ff;
+      --muted:#aeb8d3;
+      --soft:#7f8aa8;
+      --violet:#8b72ff;
+      --blue:#5687ff;
+      --cyan:#68d7ff;
+      --danger:#ff7f9f;
+      --success:#68e6ad;
+    }
+    * { box-sizing:border-box; }
+    html, body { width:100%; height:100%; overflow:hidden; }
+    body {
+      position:relative;
+      margin:0;
+      padding:16px;
+      overflow:hidden;
+      color:var(--text);
+      background:
+        radial-gradient(360px 260px at 92% -5%, rgba(68,117,255,.22), transparent 68%),
+        radial-gradient(320px 280px at -8% 96%, rgba(139,89,255,.18), transparent 70%),
+        linear-gradient(155deg,var(--bg-1),var(--bg-0));
+      font-size:12px;
+      line-height:1.4;
+    }
+    body::before {
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.25;
+      background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+      background-size:22px 22px;
+      mask-image:linear-gradient(to bottom,black,transparent 88%);
+    }
+    button,input { font:inherit; }
+    button { -webkit-tap-highlight-color:transparent; }
+    #app { position:relative; z-index:1; height:100%; display:flex; flex-direction:column; }
+    .brand { display:flex; align-items:center; gap:11px; min-height:48px; }
+    .brand-icon {
+      width:42px; height:42px; flex:none; display:grid; place-items:center;
+      padding:3px;
+      border:1px solid rgba(179,194,255,.2); border-radius:13px;
+      background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(240,243,255,.92));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 10px 28px rgba(0,0,0,.26);
+      overflow:hidden;
+    }
+    .brand-icon img {
+      width:100%; height:100%; display:block; object-fit:contain;
+      border-radius:10px;
+      background:#fff;
+    }
+    .eyebrow { color:#94a4cf; font-size:9px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+    h1 { margin:3px 0 0; font-size:17px; line-height:1.15; letter-spacing:-.02em; }
+    p { margin:0; }
+    .muted { color:var(--muted); }
+    .glass {
+      border:1px solid var(--line);
+      background:linear-gradient(145deg,rgba(35,43,70,.76),rgba(19,24,42,.66));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 16px 38px rgba(0,0,0,.18);
+      backdrop-filter:blur(18px) saturate(125%);
+      -webkit-backdrop-filter:blur(18px) saturate(125%);
+    }
+
+    .source-tabs {
+      display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:11px; padding:4px;
+      border:1px solid rgba(194,205,255,.12); border-radius:12px; background:rgba(5,8,17,.36);
+    }
+    .tab {
+      height:32px; border:1px solid transparent; border-radius:8px; color:#94a1c2;
+      background:transparent; font-weight:700; cursor:pointer;
+    }
+    .tab:hover { color:#dce2f5; background:rgba(46,55,87,.42); }
+    .tab.active {
+      color:#fff; border-color:rgba(211,219,255,.16);
+      background:linear-gradient(135deg,rgba(118,99,237,.78),rgba(76,112,245,.76));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 7px 18px rgba(46,63,178,.18);
+    }
+    .url-card { margin-top:10px; padding:13px; border-radius:16px; }
+    .field { display:block; margin-top:9px; }
+    .field:first-child { margin-top:0; }
+    .field-label { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; color:#dce2f4; font-size:10px; font-weight:700; }
+    .field-hint { color:#71809f; font-size:9px; font-weight:500; }
+    .text-input {
+      width:100%; height:36px; padding:0 11px; border:1px solid rgba(190,203,255,.15); border-radius:9px;
+      outline:none; color:#f6f8ff; background:rgba(5,8,17,.38); box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+    }
+    .text-input::placeholder { color:#64718f; }
+    .text-input:focus { border-color:rgba(118,137,255,.68); box-shadow:0 0 0 3px rgba(96,111,255,.11); }
+    .server-row { display:grid; grid-template-columns:1fr 74px; gap:7px; }
+    .check-button {
+      height:36px; border:1px solid rgba(190,203,255,.16); border-radius:9px; color:#dce2f4;
+      background:rgba(35,43,69,.76); font-weight:700; cursor:pointer;
+    }
+    .check-button:hover { background:rgba(49,59,92,.88); }
+    .helper-state { min-height:16px; margin-top:6px; color:#7f8dab; font-size:9.5px; }
+    [hidden] { display:none!important; }
+    .upload-card { margin-top:10px; padding:8px; border-radius:16px; }
+    .dropzone {
+      position:relative; display:flex; min-height:144px; padding:16px 14px;
+      border:1px dashed rgba(181,195,255,.37); border-radius:12px;
+      text-align:center; cursor:pointer; overflow:hidden;
+      background:
+        radial-gradient(190px 80px at 50% 0%,rgba(123,113,255,.17),transparent 75%),
+        rgba(6,9,18,.28);
+      flex-direction:column; justify-content:center; align-items:center;
+      transition:border-color .16s ease,background .16s ease,transform .16s ease;
+    }
+    .dropzone:hover { border-color:rgba(173,188,255,.62); background-color:rgba(18,24,43,.54); }
+    .dropzone:active { transform:scale(.995); }
+    .dropzone.drag { outline:2px solid rgba(118,137,255,.72); outline-offset:2px; }
+    .upload-icon {
+      width:38px;height:38px;display:grid;place-items:center;margin-bottom:8px;
+      border:1px solid rgba(185,198,255,.2);border-radius:12px;
+      background:rgba(143,126,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+      pointer-events:none;
+    }
+    .upload-icon svg { width:20px;height:20px;stroke:#dfe5ff; }
+    .dropzone strong { display:block; margin-bottom:3px; font-size:13px; letter-spacing:-.01em; }
+    .dropzone .muted { max-width:355px; font-size:10.5px; color:#99a5c4; }
+    .drop-actions { display:flex; justify-content:center; margin-top:11px; }
+    .drop-button {
+      position:relative;height:31px;padding:0 15px;border:1px solid rgba(210,217,255,.2);border-radius:8px;
+      color:#fff;background:linear-gradient(135deg,#7664ed,#557cff);font-weight:700;cursor:pointer;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.21),0 8px 20px rgba(65,82,214,.27);
+      transition:filter .15s ease,transform .15s ease;
+    }
+    .drop-button:hover { filter:brightness(1.08); }
+    .drop-button:active { transform:translateY(1px); }
+    input[type=file] { display:none; }
+    .files {
+      min-height:21px; max-height:36px; margin:7px 5px 0; overflow:auto;
+      white-space:pre-wrap; overflow-wrap:anywhere; color:#8f9bbb; font-size:10px;
+      scrollbar-width:thin;
+    }
+    .viewport-card { margin-top:11px; padding:12px; border-radius:14px; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; }
+    .section-head strong { font-size:11px; }
+    .section-note { color:#71809f; font-size:9px; }
+    .presets { display:grid; grid-template-columns:1fr 1fr; gap:7px 8px; margin-top:9px; }
+    .preset {
+      position:relative; display:flex; align-items:center; gap:8px; min-height:30px; padding:0 9px;
+      border:1px solid rgba(191,204,255,.09); border-radius:9px; color:#d9def0;
+      background:rgba(6,9,18,.21); font-weight:550; cursor:pointer;
+      transition:border-color .15s ease,background .15s ease;
+    }
+    .preset:hover { border-color:rgba(178,192,255,.22); background:rgba(39,47,77,.38); }
+    .preset:last-child { grid-column:1 / -1; width:calc(50% - 4px); }
+    .preset input {
+      appearance:none; width:14px; height:14px; margin:0; flex:none; border:1px solid rgba(194,205,255,.38);
+      border-radius:4px; background:rgba(2,4,10,.35); display:grid; place-items:center; cursor:pointer;
+    }
+    .preset input::after { content:""; width:7px; height:4px; border-left:1.8px solid white; border-bottom:1.8px solid white; transform:rotate(-45deg) scale(0); margin-top:-1px; transition:transform .12s ease; }
+    .preset input:checked { border-color:transparent; background:linear-gradient(135deg,var(--violet),var(--blue)); box-shadow:0 0 0 3px rgba(116,112,255,.1); }
+    .preset input:checked::after { transform:rotate(-45deg) scale(1); }
+    .actions { display:flex; gap:8px; margin-top:11px; }
+    .actions button { height:37px; padding:0 15px; border-radius:9px; font-weight:700; cursor:pointer; }
+    button.primary {
+      flex:1; border:1px solid rgba(219,225,255,.18); color:#fff;
+      background:linear-gradient(100deg,#755fe8 0%,#596fff 52%,#467fff 100%);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 10px 26px rgba(61,81,216,.25);
+    }
+    button.primary:hover { filter:brightness(1.07); }
+    button.secondary { min-width:82px; border:1px solid rgba(192,204,255,.14); color:#d8deef; background:rgba(28,34,55,.72); }
+    button.secondary:hover { background:rgba(43,51,80,.82); }
+    button:disabled { cursor:default; opacity:.5; filter:none!important; }
+    .status {
+      position:absolute; left:0; right:0; bottom:48px; display:none; padding:10px 11px;
+      border:1px solid rgba(190,203,255,.16); border-radius:11px;
+      background:rgba(10,14,26,.94); box-shadow:0 14px 34px rgba(0,0,0,.38); backdrop-filter:blur(16px);
+    }
+    .status.visible { display:block; }
+    .bar { height:4px; overflow:hidden; border-radius:99px; background:rgba(190,203,255,.13); }
+    .bar > div { width:0%; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--violet),var(--cyan)); transition:width .15s ease; }
+    .status-text { margin-top:6px; max-height:42px; overflow:auto; white-space:pre-wrap; color:#aab4cf; font-size:10px; }
+    .error { color:var(--danger)!important; }
+    .success { color:var(--success)!important; }
+    .hidden-compat { display:none!important; }
+  </style>
+</head>
+<body>
+  <main id="app">
+    <header class="brand">
+      <div class="brand-icon" aria-hidden="true">
+        <img src="data:image/png;base64,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" alt="">
+      </div>
+      <div>
+        <div class="eyebrow">Import Web Pages and Code</div>
+        <h1>HTML to Figma</h1>
+      </div>
+    </header>
+
+    <div class="source-tabs" role="tablist" aria-label="Import source">
+      <button class="tab active" data-source="url" type="button">Import from URL</button>
+      <button class="tab" data-source="local" type="button">Local HTML</button>
+    </div>
+
+    <section id="urlPanel" class="url-card glass">
+      <label class="field">
+        <span class="field-label">Website URL <span class="field-hint">Public pages only</span></span>
+        <input id="siteUrl" class="text-input" type="url" inputmode="url" placeholder="https://example.com" autocomplete="off" spellcheck="false" />
+      </label>
+      <label class="field">
+        <span class="field-label">Render server address <span class="field-hint">Paste once after deployment</span></span>
+        <span class="server-row">
+          <input id="serverUrl" class="text-input" type="url" inputmode="url" placeholder="https://your-service.onrender.com" autocomplete="off" spellcheck="false" />
+          <button id="checkHelper" class="check-button" type="button">Check</button>
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-label">Server key <span class="field-hint">Render → Environment → API_KEY</span></span>
+        <input id="serverKey" class="text-input" type="password" placeholder="Paste the generated API key" autocomplete="off" spellcheck="false" />
+      </label>
+      <div id="helperState" class="helper-state">Deploy the included server on Render, then paste its address and API key here.</div>
+    </section>
+
+    <section id="localPanel" class="upload-card glass" hidden>
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Choose an HTML file and its assets">
+        <div class="upload-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
+        </div>
+        <strong>Drop your HTML project here</strong>
+        <span class="muted">HTML, CSS, JavaScript, fonts and images can be selected together</span>
+        <div class="drop-actions"><button id="chooseFiles" class="drop-button" type="button">Choose file</button></div>
+      </div>
+      <input id="fileInput" type="file" multiple accept=".html,.htm,.css,.js,.mjs,.json,.woff,.woff2,.ttf,.otf,.png,.jpg,.jpeg,.gif,.webp,.svg,image/*,text/html,text/css,text/javascript,application/javascript,application/json,font/*" />
+      <div id="files" class="files">No files selected yet.</div>
+    </section>
+
+    <section class="viewport-card glass">
+      <div class="section-head"><strong>Viewport sizes</strong><span class="section-note">Select one or more</span></div>
+      <div class="presets">
+        <label class="preset"><input type="checkbox" name="preset" value="1920" data-label="Desktop 1920" checked> Desktop — 1920</label>
+        <label class="preset"><input type="checkbox" name="preset" value="1440" data-label="Laptop 1440"> Laptop — 1440</label>
+        <label class="preset"><input type="checkbox" name="preset" value="1024" data-label="Tablet 1024"> Tablet — 1024</label>
+        <label class="preset"><input type="checkbox" name="preset" value="768" data-label="Tablet 768"> Tablet — 768</label>
+        <label class="preset"><input type="checkbox" name="preset" value="390" data-label="Mobile 390"> Mobile — 390</label>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button id="importButton" class="primary">Import HTML</button>
+      <button id="cancelButton" class="secondary">Close</button>
+    </div>
+
+    <div id="status" class="status">
+      <div class="bar"><div id="bar"></div></div>
+      <div id="statusText" class="status-text"></div>
+    </div>
+  </main>
+
+  <div class="hidden-compat" aria-hidden="true">
+    <select id="mode"><option value="editable" selected>Editable layers</option></select>
+    <div id="nodeLimitField"><input id="maxNodes" type="number" value="100000" /></div>
+    <label id="cleanTreeRow"><input id="cleanTree" type="checkbox" /></label>
+    <div id="sourceNote"></div>
+  </div>
+
+  <script>
+    const app = document.getElementById('app');
+    const fileInput = document.getElementById('fileInput');
+    const chooseFilesButton = document.getElementById('chooseFiles');
+    const dropzone = document.getElementById('dropzone');
+    const filesView = document.getElementById('files');
+    const siteUrlInput = document.getElementById('siteUrl');
+    const serverUrlInput = document.getElementById('serverUrl');
+    const serverKeyInput = document.getElementById('serverKey');
+    const checkHelperButton = document.getElementById('checkHelper');
+    const helperState = document.getElementById('helperState');
+    const importButton = document.getElementById('importButton');
+    const cancelButton = document.getElementById('cancelButton');
+    const modeSelect = document.getElementById('mode');
+    const nodeLimitField = document.getElementById('nodeLimitField');
+    const cleanTreeRow = document.getElementById('cleanTreeRow');
+    const cleanTreeInput = document.getElementById('cleanTree');
+    const maxNodesInput = document.getElementById('maxNodes');
+    const status = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const bar = document.getElementById('bar');
+    const localPanel = document.getElementById('localPanel');
+    const urlPanel = document.getElementById('urlPanel');
+    const sourceNote = document.getElementById('sourceNote');
+
+    let selectedFiles = [];
+    let sourceMode = 'url';
+    let activeRenderFrame = null;
+    let figmaWaiter = null;
+    let currentWarnings = [];
+    const droppedFilePaths = new WeakMap();
+
+
+
+    document.querySelectorAll('.tab').forEach((button) => button.addEventListener('click', () => setSourceMode(button.dataset.source)));
+    fileInput.addEventListener('change', () => setFiles(Array.from(fileInput.files || [])));
+    chooseFilesButton.addEventListener('click', (event) => { event.stopPropagation(); fileInput.click(); });
+    dropzone.addEventListener('click', (event) => { if (!event.target.closest('button')) fileInput.click(); });
+    dropzone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInput.click(); } });
+    checkHelperButton.addEventListener('click', checkHelper);
+    serverUrlInput.addEventListener('input', () => {
+      try { localStorage.setItem('html-to-figma-server-url', serverUrlInput.value.trim()); } catch (_error) {}
+      helperState.textContent = 'Press Check to test the server connection.';
+      helperState.className = 'helper-state muted';
+    });
+    serverKeyInput.addEventListener('input', () => {
+      try { localStorage.setItem('html-to-figma-server-key', serverKeyInput.value.trim()); } catch (_error) {}
+      helperState.textContent = 'Press Check to test the server connection.';
+      helperState.className = 'helper-state muted';
+    });
+    importButton.addEventListener('click', runImport);
+    cancelButton.addEventListener('click', () => parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*'));
+
+    for (const eventName of ['dragenter','dragover']) dropzone.addEventListener(eventName, (event) => { event.preventDefault(); dropzone.classList.add('drag'); });
+    for (const eventName of ['dragleave','drop']) dropzone.addEventListener(eventName, (event) => { event.preventDefault(); dropzone.classList.remove('drag'); });
+    dropzone.addEventListener('drop', async (event) => setFiles(await filesFromDataTransfer(event.dataTransfer)));
+
+    function setSourceMode(mode) {
+      sourceMode = mode === 'local' ? 'local' : 'url';
+      document.querySelectorAll('.tab').forEach((button) => button.classList.toggle('active', button.dataset.source === sourceMode));
+      localPanel.hidden = sourceMode !== 'local';
+      urlPanel.hidden = sourceMode !== 'url';
+      importButton.textContent = sourceMode === 'url' ? 'Import website' : 'Import HTML';
+      sourceNote.textContent = sourceMode === 'url'
+        ? 'The Render server opens the page in Chromium before Figma creates editable layers.'
+        : 'Local HTML and selected assets are rendered before import.';
+    }
+
+    function getServerOrigin() {
+      let value = serverUrlInput.value.trim();
+      if (!value) throw new Error('Paste your Render server address first.');
+      if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
+      const parsed = new URL(value);
+      if (!/^https?:$/i.test(parsed.protocol)) throw new Error('The server address must start with https://');
+      return parsed.origin;
+    }
+
+    function getServerKey() {
+      const value = serverKeyInput.value.trim();
+      if (!value) throw new Error('Paste the API_KEY from Render first.');
+      return value;
+    }
+
+    function updateModeUi() {
+      // Reserved for future import-mode-specific controls.
+    }
+
+    function readDirectoryEntries(reader) {
+      return new Promise((resolve, reject) => {
+        const all = [];
+        const next = () => reader.readEntries((entries) => {
+          if (!entries.length) { resolve(all); return; }
+          all.push(...entries);
+          next();
+        }, reject);
+        next();
+      });
+    }
+
+    async function collectEntryFiles(entry, prefix = '') {
+      if (!entry) return [];
+      if (entry.isFile) {
+        const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+        const relativePath = `${prefix}${entry.name}`;
+        droppedFilePaths.set(file, relativePath);
+        return [file];
+      }
+      if (entry.isDirectory) {
+        const entries = await readDirectoryEntries(entry.createReader());
+        const nested = [];
+        for (const child of entries) nested.push(...await collectEntryFiles(child, `${prefix}${entry.name}/`));
+        return nested;
+      }
+      return [];
+    }
+
+    async function filesFromDataTransfer(dataTransfer) {
+      if (!dataTransfer) return [];
+      const entries = Array.from(dataTransfer.items || [])
+        .map((item) => item.webkitGetAsEntry?.())
+        .filter(Boolean);
+      if (!entries.length) return Array.from(dataTransfer.files || []);
+      const files = [];
+      for (const entry of entries) files.push(...await collectEntryFiles(entry));
+      return files;
+    }
+
+    function setFiles(files) {
+      selectedFiles = files;
+      const html = files.find((file) => /\.html?$/i.test(file.name));
+      filesView.textContent = files.length
+        ? files.map((file) => `${file === html ? '●' : '○'} ${file.webkitRelativePath || droppedFilePaths.get(file) || file.name}`).join('\n')
+        : 'No files selected yet.';
+    }
+
+    function setStatus(text, kind = 'normal', percent = null) {
+      status.classList.add('visible');
+      statusText.textContent = text;
+      statusText.className = `status-text ${kind === 'error' ? 'error' : kind === 'success' ? 'success' : 'muted'}`;
+      if (percent !== null) bar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+    }
+
+    function setBusy(busy) {
+      importButton.disabled = busy;
+      fileInput.disabled = busy;
+      chooseFilesButton.disabled = busy;
+      checkHelperButton.disabled = busy;
+      serverUrlInput.disabled = busy;
+      serverKeyInput.disabled = busy;
+      document.querySelectorAll('input[name="preset"], #siteUrl, #mode, #maxNodes, #cleanTree').forEach((element) => element.disabled = busy);
+    }
+    function normalizePath(value) {
+      return decodeURIComponent(String(value || ''))
+        .replace(/[?#].*$/, '')
+        .replace(/^\.\//, '')
+        .replace(/\\/g, '/')
+        .toLowerCase();
+    }
+
+    function basename(value) {
+      const normalized = normalizePath(value);
+      return normalized.slice(normalized.lastIndexOf('/') + 1);
+    }
+
+    function readAsText(file) {
+      return file.text();
+    }
+
+    function readAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error || new Error(`Could not read ${file.name}`));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function prepareFiles(files) {
+      const records = [];
+      for (const file of files) {
+        const path = normalizePath(file.webkitRelativePath || droppedFilePaths.get(file) || file.name);
+        const record = { file, path, name: normalizePath(file.name), text: null, dataUrl: null };
+        if (/\.(html?|css|svg|m?js)$/i.test(file.name)) record.text = await readAsText(file);
+        if (!/\.(html?|css)$/i.test(file.name)) record.dataUrl = await readAsDataUrl(file);
+        records.push(record);
+      }
+
+      const byPath = new Map();
+      for (const record of records) {
+        byPath.set(record.path, record);
+        if (!byPath.has(record.name)) byPath.set(record.name, record);
+        const base = basename(record.path);
+        if (!byPath.has(base)) byPath.set(base, record);
+      }
+      return { records, byPath };
+    }
+
+    function dirnamePath(value) {
+      const normalized = normalizePath(value);
+      const index = normalized.lastIndexOf('/');
+      return index >= 0 ? normalized.slice(0, index + 1) : '';
+    }
+
+    function normalizeJoinedPath(basePath, reference) {
+      const raw = normalizePath(`${dirnamePath(basePath)}${reference}`);
+      const parts = [];
+      for (const part of raw.split('/')) {
+        if (!part || part === '.') continue;
+        if (part === '..') parts.pop();
+        else parts.push(part);
+      }
+      return parts.join('/');
+    }
+
+    function findRecord(byPath, reference, basePath = '') {
+      if (!reference || /^(data:|blob:|https?:|file:|\/\/|#)/i.test(reference)) return null;
+      const direct = normalizePath(reference).replace(/^\//, '');
+      const joined = normalizeJoinedPath(basePath, reference);
+      const candidates = [joined, direct, basename(reference)];
+      for (const candidate of [...candidates]) {
+        if (!candidate) continue;
+        if (!/\.[a-z0-9]+$/i.test(candidate)) {
+          candidates.push(`${candidate}.js`, `${candidate}.mjs`, `${candidate}.css`, `${candidate}/index.js`, `${candidate}/index.mjs`);
+        }
+      }
+      for (const candidate of candidates) {
+        const record = byPath.get(candidate);
+        if (record) return record;
+      }
+      return null;
+    }
+
+    function textDataUrl(mime, value) {
+      return `data:${mime};charset=utf-8,${encodeURIComponent(value)}`;
+    }
+
+    function moduleDataUrl(record, byPath, cache = new Map(), stack = new Set()) {
+      if (!record?.text) return record?.dataUrl || null;
+      if (cache.has(record.path)) return cache.get(record.path);
+      if (stack.has(record.path)) return record.dataUrl || textDataUrl('text/javascript', record.text);
+      stack.add(record.path);
+      let source = record.text;
+      const rewriteSpecifier = (specifier) => {
+        const dependency = findRecord(byPath, specifier, record.path);
+        if (!dependency || !/\.m?js$/i.test(dependency.file.name)) return specifier;
+        return moduleDataUrl(dependency, byPath, cache, stack) || specifier;
+      };
+      source = source.replace(/(\b(?:import|export)\s+(?:[^'";]*?\s+from\s*)?)(['"])([^'"]+)\2/g, (_full, prefix, quote, specifier) => `${prefix}${quote}${rewriteSpecifier(specifier)}${quote}`);
+      source = source.replace(/\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/g, (_full, quote, specifier) => `import(${quote}${rewriteSpecifier(specifier)}${quote})`);
+      source = source.replace(/new\s+URL\(\s*(['"])([^'"]+)\1\s*,\s*import\.meta\.url\s*\)/g, (full, quote, specifier) => {
+        const asset = findRecord(byPath, specifier, record.path);
+        return asset?.dataUrl ? `new URL(${quote}${asset.dataUrl}${quote})` : full;
+      });
+      stack.delete(record.path);
+      const url = textDataUrl('text/javascript', source);
+      cache.set(record.path, url);
+      return url;
+    }
+
+    function rewriteCssUrls(css, byPath, basePath = '') {
+      return String(css || '').replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi, (full, _quote, rawUrl) => {
+        const url = String(rawUrl || '').trim();
+        if (!url || /^(data:|blob:|https?:|\/\/|#)/i.test(url)) return full;
+        const record = findRecord(byPath, url, basePath);
+        return record?.dataUrl ? `url("${record.dataUrl}")` : full;
+      });
+    }
+
+    function inlineCssImports(css, byPath, basePath = '', seen = new Set()) {
+      const current = normalizePath(basePath);
+      if (seen.has(current)) return rewriteCssUrls(css, byPath, basePath);
+      const nextSeen = new Set(seen);
+      if (current) nextSeen.add(current);
+      const imported = String(css || '').replace(/@import\s+(?:url\()?\s*(['"])([^'"]+)\1\s*\)?\s*([^;]*);/gi, (full, _quote, reference, media) => {
+        const record = findRecord(byPath, reference, basePath);
+        if (!record?.text || !/\.css$/i.test(record.file.name)) return full;
+        const nested = inlineCssImports(record.text, byPath, record.path, nextSeen);
+        const condition = String(media || '').trim();
+        return condition ? `@media ${condition}{${nested}}` : nested;
+      });
+      return rewriteCssUrls(imported, byPath, basePath);
+    }
+
+    function sanitizeAndInline(htmlText, byPath, records, htmlPath = '') {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+      const missingResources = new Set();
+      const moduleCache = new Map();
+      doc.querySelectorAll('iframe, object, embed, base').forEach((node) => node.remove());
+      doc.querySelectorAll('meta[http-equiv="refresh" i], meta[http-equiv="content-security-policy" i]').forEach((node) => node.remove());
+
+      // Make selected local JSON, modules, fonts and images available to scripts
+      // that load them with fetch() or XMLHttpRequest using relative paths.
+      const runtimeAssets = {};
+      for (const record of records) {
+        const url = record.dataUrl || (record.text != null ? textDataUrl('text/plain', record.text) : null);
+        if (!url) continue;
+        for (const key of [record.path, record.name, basename(record.path)]) {
+          if (key && !runtimeAssets[key]) runtimeAssets[key] = url;
+        }
+      }
+      const runtime = doc.createElement('script');
+      runtime.setAttribute('data-html-to-figma-runtime', '');
+      runtime.textContent = `(() => {
+        const assets = ${JSON.stringify(runtimeAssets)};
+        const normalize = value => {
+          try { value = decodeURIComponent(String(value || '')); } catch (_error) { value = String(value || ''); }
+          return value.replace(/[?#].*$/, '').replace(/^\\.\\//, '').replace(/^\\//, '').replace(/\\\\/g, '/').toLowerCase();
+        };
+        const resolve = value => {
+          const normalized = normalize(value);
+          const base = normalized.slice(normalized.lastIndexOf('/') + 1);
+          return assets[normalized] || assets[base] || null;
+        };
+        const nativeFetch = window.fetch?.bind(window);
+        if (nativeFetch) window.fetch = (input, init) => {
+          const raw = typeof input === 'string' || input instanceof URL ? String(input) : input?.url;
+          const mapped = resolve(raw);
+          return nativeFetch(mapped || input, init);
+        };
+        const NativeXHR = window.XMLHttpRequest;
+        if (NativeXHR) {
+          const nativeOpen = NativeXHR.prototype.open;
+          NativeXHR.prototype.open = function(method, url, ...rest) {
+            return nativeOpen.call(this, method, resolve(url) || url, ...rest);
+          };
+        }
+      })();`;
+      doc.head.prepend(runtime);
+
+      // Keep scripts so framework-driven sections can materialize before the
+      // DOM is measured. Local ES modules have their relative imports rewritten
+      // to selected files, including modules nested in project subfolders.
+      for (const script of Array.from(doc.querySelectorAll('script[src]'))) {
+        const src = script.getAttribute('src') || '';
+        const record = findRecord(byPath, src, htmlPath);
+        if (record?.dataUrl || record?.text) {
+          const isModule = String(script.getAttribute('type') || '').toLowerCase() === 'module' || /\.mjs$/i.test(record.file.name);
+          const localUrl = isModule ? moduleDataUrl(record, byPath, moduleCache) : record.dataUrl;
+          if (localUrl) script.setAttribute('src', localUrl);
+          script.removeAttribute('integrity');
+          script.removeAttribute('crossorigin');
+          script.setAttribute('data-local-source', record.file.name);
+        } else if (!/^(https?:)?\/\//i.test(src) && !/^(data:|blob:)/i.test(src)) {
+          missingResources.add(src);
+          script.remove();
+        }
+      }
+      for (const script of Array.from(doc.querySelectorAll('script[type="module"]:not([src])'))) {
+        const source = script.textContent || '';
+        if (!/\b(?:import|export)\b/.test(source)) continue;
+        const virtualRecord = { path:normalizePath(htmlPath || 'inline-entry.js'), text:source, dataUrl:null, file:{ name:'inline-entry.js' } };
+        const url = moduleDataUrl(virtualRecord, byPath, moduleCache);
+        if (url) { script.textContent = ''; script.setAttribute('src', url); }
+      }
+
+      for (const link of Array.from(doc.querySelectorAll('link[rel~="stylesheet" i]'))) {
+        const href = link.getAttribute('href') || '';
+        const record = findRecord(byPath, href, htmlPath);
+        if (record?.text != null) {
+          const style = doc.createElement('style');
+          style.setAttribute('data-local-source', record.file.name);
+          style.textContent = inlineCssImports(record.text, byPath, record.path);
+          link.replaceWith(style);
+        } else if (!/^(https?:)?\/\//i.test(href) && !/^(data:|blob:)/i.test(href)) {
+          missingResources.add(href);
+          link.remove();
+        }
+      }
+
+      for (const style of doc.querySelectorAll('style')) {
+        if (style.hasAttribute('data-local-source')) continue;
+        style.textContent = inlineCssImports(style.textContent || '', byPath, htmlPath);
+      }
+      for (const element of doc.querySelectorAll('[style]')) {
+        element.setAttribute('style', rewriteCssUrls(element.getAttribute('style') || '', byPath, htmlPath));
+      }
+
+      const replaceAttr = (selector, attr) => {
+        for (const element of doc.querySelectorAll(selector)) {
+          const value = element.getAttribute(attr) || '';
+          const record = findRecord(byPath, value, htmlPath);
+          if (record?.dataUrl) element.setAttribute(attr, record.dataUrl);
+          else if (value && !/^(data:|blob:|https?:|\/\/|#)/i.test(value)) missingResources.add(value);
+        }
+      };
+      replaceAttr('img[src], source[src], input[type="image"][src], video[src], audio[src]', 'src');
+      replaceAttr('video[poster]', 'poster');
+      replaceAttr('svg image[href]', 'href');
+      replaceAttr('svg image[xlink\\:href]', 'xlink:href');
+
+      for (const source of doc.querySelectorAll('[srcset]')) {
+        const rewritten = (source.getAttribute('srcset') || '')
+          .split(',')
+          .map((part) => {
+            const bits = part.trim().split(/\s+/);
+            const record = findRecord(byPath, bits[0], htmlPath);
+            if (record?.dataUrl) bits[0] = record.dataUrl;
+            else if (bits[0] && !/^(data:|blob:|https?:|\/\/)/i.test(bits[0])) missingResources.add(bits[0]);
+            return bits.join(' ');
+          })
+          .join(', ');
+        source.setAttribute('srcset', rewritten);
+      }
+
+      // Lazy images and content-visibility commonly leave lower sections empty
+      // inside an off-screen importer frame. Force browser layout for the full DOM.
+      doc.querySelectorAll('img[loading], iframe[loading]').forEach((element) => element.setAttribute('loading', 'eager'));
+      doc.querySelectorAll('img').forEach((element) => element.setAttribute('decoding', 'sync'));
+      doc.querySelectorAll('a[href^="javascript:" i], form[action^="javascript:" i]').forEach((node) => {
+        node.removeAttribute(node.tagName === 'FORM' ? 'action' : 'href');
+      });
+
+      doc.querySelectorAll('meta[name="viewport" i]').forEach((node) => node.remove());
+      const meta = doc.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1, maximum-scale=1';
+      doc.head.prepend(meta);
+
+      const viewportStyle = doc.createElement('style');
+      viewportStyle.setAttribute('data-html-to-figma-viewport', '');
+      viewportStyle.textContent = `
+        html{scrollbar-width:none!important}
+        html::-webkit-scrollbar,body::-webkit-scrollbar{width:0!important;height:0!important}
+        body *{content-visibility:visible!important}
+      `;
+      doc.head.appendChild(viewportStyle);
+
+      if (missingResources.size) {
+        const sample = Array.from(missingResources).slice(0, 4).join(', ');
+        currentWarnings.push(`Some local project files were not selected (${sample}${missingResources.size > 4 ? ', …' : ''}). Select the missing referenced files together with the HTML to render every dynamic section.`);
+      }
+      return doc;
+    }
+
+    function waitForLoad(frame) {
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('HTML took too long to load.')), 10000);
+        frame.onload = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+      });
+    }
+
+    function nextFrame() {
+      return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function runtimeDocumentHeight(doc) {
+      return Math.max(
+        doc.documentElement?.scrollHeight || 0,
+        doc.documentElement?.offsetHeight || 0,
+        doc.body?.scrollHeight || 0,
+        doc.body?.offsetHeight || 0,
+        1,
+      );
+    }
+
+    async function scrollThroughDocument(frame) {
+      const doc = frame.contentDocument;
+      const win = frame.contentWindow;
+      if (!doc || !win || !doc.body) return;
+      win.dispatchEvent(new Event('resize'));
+      await nextFrame();
+      let height = runtimeDocumentHeight(doc);
+      const step = Math.max(240, Math.floor(win.innerHeight * .72));
+      let y = 0;
+      let steps = 0;
+      while (y <= height && steps < 220) {
+        win.scrollTo(0, y);
+        win.dispatchEvent(new Event('scroll'));
+        doc.dispatchEvent(new Event('scroll', { bubbles:true }));
+        await sleep(70);
+        await nextFrame();
+        height = Math.max(height, runtimeDocumentHeight(doc));
+        y += step;
+        steps += 1;
+      }
+      win.scrollTo(0, Math.max(0, height - win.innerHeight));
+      win.dispatchEvent(new Event('scroll'));
+      await sleep(180);
+      await waitForDynamicContent(frame, 9000, 700);
+      win.scrollTo(0, 0);
+      win.dispatchEvent(new Event('scroll'));
+      await nextFrame();
+    }
+
+    function settleAnimations(frame) {
+      const doc = frame.contentDocument;
+      if (!doc) return;
+      try {
+        for (const animation of doc.getAnimations?.({ subtree:true }) || []) {
+          const timing = animation.effect?.getComputedTiming?.();
+          if (timing && Number.isFinite(timing.endTime)) animation.finish();
+          else animation.pause();
+        }
+      } catch (_error) {}
+      const style = doc.createElement('style');
+      style.setAttribute('data-html-to-figma-settled', '');
+      style.textContent = '*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}';
+      doc.head.appendChild(style);
+    }
+
+    async function waitForDynamicContent(frame, timeoutMs = 20000, quietMs = 1200) {
+      const doc = frame.contentDocument;
+      const win = frame.contentWindow;
+      if (!doc || !win || !doc.body) return;
+      let lastMutation = performance.now();
+      let mutationCount = 0;
+      const observer = new MutationObserver(() => {
+        mutationCount += 1;
+        lastMutation = performance.now();
+      });
+      observer.observe(doc.documentElement, { subtree:true, childList:true, characterData:true, attributes:true });
+      const started = performance.now();
+      try {
+        while (performance.now() - started < timeoutMs) {
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          const ready = doc.readyState === 'complete' || doc.readyState === 'interactive';
+          const quiet = performance.now() - lastMutation >= quietMs;
+          if (ready && quiet) break;
+        }
+      } finally {
+        observer.disconnect();
+      }
+      // A final pair of animation frames lets the browser commit layout after
+      // the last framework mutation.
+      await nextFrame();
+      return mutationCount;
+    }
+
+    function detectUnrenderedTemplates(doc) {
+      const unresolved = [];
+      const walker = doc.createTreeWalker(doc.body || doc.documentElement, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const value = String(node.nodeValue || '').trim();
+        if (/{{[^{}]+}}/.test(value)) unresolved.push(value);
+        if (unresolved.length >= 3) break;
+      }
+      return unresolved;
+    }
+
+    async function stabilizeViewportWidth(frame, requestedWidth) {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const actual = frame.contentWindow?.innerWidth || frame.contentDocument?.documentElement?.clientWidth || requestedWidth;
+        if (Math.abs(actual - requestedWidth) <= 1) return actual;
+        const currentWidth = parseFloat(frame.style.width) || requestedWidth;
+        const correctedWidth = Math.max(1, currentWidth + (requestedWidth - actual));
+        frame.style.width = `${correctedWidth}px`;
+        frame.style.minWidth = `${correctedWidth}px`;
+        frame.style.maxWidth = `${correctedWidth}px`;
+        frame.width = String(Math.round(correctedWidth));
+        await nextFrame();
+      }
+      return frame.contentWindow?.innerWidth || frame.contentDocument?.documentElement?.clientWidth || requestedWidth;
+    }
+
+    const HARD_DOCUMENT_HEIGHT = 100000;
+
+    function viewportHeightForWidth(width) {
+      if (width >= 1800) return 1080;
+      if (width >= 1200) return 900;
+      if (width >= 900) return 768;
+      if (width >= 600) return 1024;
+      return 844;
+    }
+
+    function measureAutomaticDocumentHeight(doc, win) {
+      const raw = Math.max(
+        doc.documentElement.scrollHeight,
+        doc.documentElement.offsetHeight,
+        doc.body?.scrollHeight || 0,
+        doc.body?.offsetHeight || 0,
+        1,
+      );
+      let meaningfulBottom = 0;
+      for (const element of Array.from(doc.querySelectorAll('body *'))) {
+        const style = win.getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0 || style.position === 'fixed') continue;
+        const rect = element.getBoundingClientRect();
+        if (rect.width <= .05 || rect.height <= .05) continue;
+        const directText = Array.from(element.childNodes).some((node) => node.nodeType === Node.TEXT_NODE && String(node.nodeValue || '').trim());
+        const meaningfulTag = /^(IMG|SVG|CANVAS|VIDEO|PICTURE|INPUT|TEXTAREA|SELECT|BUTTON|TABLE|FOOTER|HR)$/i.test(element.tagName);
+        if (element.children.length === 0 || directText || meaningfulTag) meaningfulBottom = Math.max(meaningfulBottom, rect.bottom + win.scrollY);
+      }
+      const bodyStyle = doc.body ? win.getComputedStyle(doc.body) : null;
+      const paddedBottom = Math.ceil(meaningfulBottom + px(bodyStyle?.paddingBottom || '0'));
+      const suspiciousTail = raw - paddedBottom > Math.max(600, win.innerHeight * 1.5);
+      return suspiciousTail && paddedBottom > 0 ? paddedBottom : Math.ceil(raw);
+    }
+
+    async function createRenderFrame(doc, width) {
+      cleanupRenderFrame();
+      const frame = document.createElement('iframe');
+      frame.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms');
+      frame.setAttribute('aria-hidden', 'true');
+      frame.setAttribute('scrolling', 'no');
+      frame.width = String(width);
+      frame.height = String(viewportHeightForWidth(width));
+      frame.style.position = 'fixed';
+      // Keep the frame geometrically inside the plugin viewport so lazy-loading
+      // and IntersectionObserver-based sections can activate. A tiny transform
+      // makes the large page invisible without changing its internal viewport.
+      frame.style.left = '0';
+      frame.style.top = '0';
+      frame.style.width = `${width}px`;
+      frame.style.minWidth = `${width}px`;
+      frame.style.maxWidth = `${width}px`;
+      frame.style.boxSizing = 'content-box';
+      // The iframe must use a realistic viewport height. Setting it to the old
+      // 20,000 px limit made 100vh/min-height layouts expand to 20,000 px and
+      // produced the huge blank tail seen in imported frames.
+      frame.style.height = `${viewportHeightForWidth(width)}px`;
+      frame.style.border = '0';
+      frame.style.overflow = 'hidden';
+      frame.style.visibility = 'visible';
+      frame.style.opacity = '0';
+      frame.style.pointerEvents = 'none';
+      frame.style.transform = 'scale(.01)';
+      frame.style.transformOrigin = '0 0';
+      frame.style.zIndex = '2147483647';
+      document.body.appendChild(frame);
+      activeRenderFrame = frame;
+      const loadPromise = waitForLoad(frame);
+      frame.srcdoc = '<!doctype html>' + doc.documentElement.outerHTML;
+      await loadPromise;
+      const actualViewportWidth = await stabilizeViewportWidth(frame, width);
+      await waitForDynamicContent(frame);
+      await scrollThroughDocument(frame);
+
+      const renderDoc = frame.contentDocument;
+      if (!renderDoc) throw new Error('Could not open the HTML in the render frame.');
+      try { await renderDoc.fonts?.ready; } catch (_error) {}
+      await Promise.all(Array.from(renderDoc.images).map(async (img) => {
+        try {
+          if (!img.complete) await new Promise((resolve) => {
+            const done = () => resolve();
+            img.addEventListener('load', done, { once: true });
+            img.addEventListener('error', done, { once: true });
+            setTimeout(done, 3000);
+          });
+          if (img.decode) await img.decode().catch(() => {});
+        } catch (_error) {}
+      }));
+      await scrollThroughDocument(frame);
+      settleAnimations(frame);
+      await waitForDynamicContent(frame, 6000, 600);
+      await nextFrame();
+
+      const measured = measureAutomaticDocumentHeight(renderDoc, frame.contentWindow);
+      const geometryScale = Math.abs(actualViewportWidth - width) > 1 ? width / actualViewportWidth : 1;
+      const height = Math.min(HARD_DOCUMENT_HEIGHT, Math.ceil(measured * geometryScale));
+      // Do not resize the iframe to the full document height: that changes vh
+      // units and can recursively stretch the page. All DOM coordinates are
+      // still available while the viewport remains at its real preset height.
+      return { frame, doc: renderDoc, width, height, geometryScale, actualViewportWidth, wasClipped: measured * geometryScale > HARD_DOCUMENT_HEIGHT };
+    }
+
+    function cleanupRenderFrame() {
+      if (activeRenderFrame) activeRenderFrame.remove();
+      activeRenderFrame = null;
+    }
+
+    function parseCssColor(value) {
+      if (!value || value === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
+      const probe = document.createElement('canvas').getContext('2d');
+      if (!probe) return { r: 0, g: 0, b: 0, a: 0 };
+      probe.fillStyle = '#000000';
+      try { probe.fillStyle = value; } catch (_error) {}
+      const normalized = String(probe.fillStyle);
+      if (/^#[0-9a-f]{6}$/i.test(normalized)) {
+        return {
+          r: parseInt(normalized.slice(1, 3), 16),
+          g: parseInt(normalized.slice(3, 5), 16),
+          b: parseInt(normalized.slice(5, 7), 16),
+          a: 1,
+        };
+      }
+      if (/^#[0-9a-f]{8}$/i.test(normalized)) {
+        return {
+          r: parseInt(normalized.slice(1, 3), 16),
+          g: parseInt(normalized.slice(3, 5), 16),
+          b: parseInt(normalized.slice(5, 7), 16),
+          a: parseInt(normalized.slice(7, 9), 16) / 255,
+        };
+      }
+      const match = normalized.match(/rgba?\(([^)]+)\)/i) || String(value).match(/rgba?\(([^)]+)\)/i);
+      if (match) {
+        const parts = match[1].replace(/\//g, ' ').split(/[\s,]+/).filter(Boolean);
+        const channel = (part) => part?.includes('%') ? 255 * parseFloat(part) / 100 : parseFloat(part || '0');
+        const alpha = parts[3] == null ? 1 : (parts[3].includes('%') ? parseFloat(parts[3]) / 100 : parseFloat(parts[3]));
+        return { r: channel(parts[0]), g: channel(parts[1]), b: channel(parts[2]), a: Number.isFinite(alpha) ? alpha : 1 };
+      }
+      return { r: 0, g: 0, b: 0, a: 0 };
+    }
+
+    function px(value, fallback = 0) {
+      const number = parseFloat(value);
+      return Number.isFinite(number) ? number : fallback;
+    }
+
+    function parseRadius(style) {
+      return [
+        px(style.borderTopLeftRadius),
+        px(style.borderTopRightRadius),
+        px(style.borderBottomRightRadius),
+        px(style.borderBottomLeftRadius),
+      ];
+    }
+
+    function parseShadow(value) {
+      if (!value || value === 'none' || value.includes('inset')) return null;
+      const first = splitTopLevel(value, ',')[0];
+      const colorMatch = first.match(/rgba?\([^)]*\)|#[0-9a-f]{3,8}/i);
+      const color = parseCssColor(colorMatch ? colorMatch[0] : 'rgba(0,0,0,.25)');
+      const numericPart = colorMatch ? first.replace(colorMatch[0], '') : first;
+      const values = (numericPart.match(/-?\d*\.?\d+px/g) || []).map(parseFloat);
+      if (values.length < 2) return null;
+      return {
+        color,
+        offsetX: values[0] || 0,
+        offsetY: values[1] || 0,
+        blur: values[2] || 0,
+        spread: values[3] || 0,
+      };
+    }
+
+    function splitTopLevel(value, delimiter) {
+      const result = [];
+      let current = '';
+      let depth = 0;
+      for (const char of value) {
+        if (char === '(') depth += 1;
+        if (char === ')') depth = Math.max(0, depth - 1);
+        if (char === delimiter && depth === 0) {
+          result.push(current.trim());
+          current = '';
+        } else current += char;
+      }
+      if (current.trim()) result.push(current.trim());
+      return result;
+    }
+
+    function parseDirection(value) {
+      const token = String(value || '').trim().toLowerCase();
+      if (/^-?\d*\.?\d+(deg|turn|rad)$/.test(token)) {
+        const number = parseFloat(token);
+        if (token.endsWith('turn')) return number * 360;
+        if (token.endsWith('rad')) return number * 180 / Math.PI;
+        return number;
+      }
+      const map = { 'to top':0, 'to top right':45, 'to right top':45, 'to right':90, 'to bottom right':135, 'to right bottom':135, 'to bottom':180, 'to bottom left':225, 'to left bottom':225, 'to left':270, 'to top left':315, 'to left top':315 };
+      return map[token] ?? null;
+    }
+
+    function parseColorStop(token) {
+      const text = String(token || '').trim();
+      const match = text.match(/^(rgba?\([^)]*\)|hsla?\([^)]*\)|#[0-9a-f]{3,8}|[a-z]+)(?:\s+(-?\d*\.?\d+)(%|px)?)?/i);
+      if (!match) return null;
+      return { color:parseCssColor(match[1]), rawPosition:match[2] == null ? null : Number(match[2]), unit:match[3] || '%' };
+    }
+
+    function normalizeStops(stops) {
+      if (!stops.length) return [];
+      const result = stops.map((stop) => ({ ...stop, position:stop.rawPosition == null ? null : (stop.unit === '%' ? stop.rawPosition / 100 : null) }));
+      if (result[0].position == null) result[0].position = 0;
+      if (result[result.length - 1].position == null) result[result.length - 1].position = 1;
+      let start = 0;
+      while (start < result.length - 1) {
+        let end = start + 1;
+        while (end < result.length && result[end].position == null) end += 1;
+        if (end >= result.length) break;
+        const from = result[start].position;
+        const to = result[end].position;
+        for (let index = start + 1; index < end; index += 1) result[index].position = from + (to - from) * ((index - start) / (end - start));
+        start = end;
+      }
+      return result.map((stop) => ({ position:Math.max(0,Math.min(1,stop.position ?? 0)), color:stop.color }));
+    }
+
+    function parseGradient(backgroundImage) {
+      if (!backgroundImage || backgroundImage === 'none') return null;
+      const layer = splitTopLevel(backgroundImage, ',')[0] || '';
+      const linear = layer.match(/^linear-gradient\((.*)\)$/i);
+      if (linear) {
+        const parts = splitTopLevel(linear[1], ',');
+        let angle = parseDirection(parts[0]);
+        if (angle == null) angle = 180;
+        else parts.shift();
+        const stops = normalizeStops(parts.map(parseColorStop).filter(Boolean));
+        return stops.length >= 2 ? { type:'linear-gradient', angle, stops } : null;
+      }
+      const radial = layer.match(/^radial-gradient\((.*)\)$/i);
+      if (radial) {
+        const parts = splitTopLevel(radial[1], ',');
+        while (parts.length && !parseColorStop(parts[0])) parts.shift();
+        const stops = normalizeStops(parts.map(parseColorStop).filter(Boolean));
+        return stops.length >= 2 ? { type:'radial-gradient', stops } : null;
+      }
+      return null;
+    }
+
+    function extractDataUrl(backgroundImage) {
+      if (!backgroundImage || backgroundImage === 'none') return null;
+      const match = backgroundImage.match(/url\(["']?(data:[^"')]+)["']?\)/i);
+      return match ? match[1] : null;
+    }
+
+    function dataUrlToBytes(dataUrl) {
+      const comma = dataUrl.indexOf(',');
+      if (comma < 0) throw new Error('Invalid data URL.');
+      const header = dataUrl.slice(0, comma);
+      const body = dataUrl.slice(comma + 1);
+      if (/;base64/i.test(header)) {
+        const binary = atob(body);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      }
+      return new TextEncoder().encode(decodeURIComponent(body));
+    }
+
+    function canvasToPngBytes(canvas) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) return reject(new Error('Could not create PNG.'));
+          resolve(new Uint8Array(await blob.arrayBuffer()));
+        }, 'image/png');
+      });
+    }
+
+    async function imageElementToPng(img) {
+      const naturalWidth = img.naturalWidth || Math.max(1, Math.round(img.getBoundingClientRect().width));
+      const naturalHeight = img.naturalHeight || Math.max(1, Math.round(img.getBoundingClientRect().height));
+      const scale = Math.min(1, 4096 / naturalWidth, 4096 / naturalHeight);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas is unavailable.');
+      context.drawImage(img, 0, 0, canvas.width, canvas.height);
+      return canvasToPngBytes(canvas);
+    }
+
+    async function dataImageToSupportedBytes(dataUrl) {
+      const mime = (dataUrl.match(/^data:([^;,]+)/i) || [])[1]?.toLowerCase() || '';
+      if (['image/png', 'image/jpeg', 'image/jpg', 'image/gif'].includes(mime)) return dataUrlToBytes(dataUrl);
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => imageElementToPng(img).then(resolve, reject);
+        img.onerror = () => reject(new Error('Could not convert the image.'));
+        img.src = dataUrl;
+      });
+    }
+
+    function nodeName(element) {
+      const id = element.id ? `#${element.id}` : '';
+      const classes = Array.from(element.classList || []).slice(0, 3).map((value) => `.${value}`).join('');
+      return `${element.tagName.toLowerCase()}${id}${classes}`;
+    }
+
+    function rectSpec(rect) {
+      return {
+        x: rect.left,
+        y: rect.top,
+        width: Math.max(.01, rect.width),
+        height: Math.max(.01, rect.height),
+      };
+    }
+
+    function textAlign(value) {
+      if (value === 'center') return 'CENTER';
+      if (value === 'right' || value === 'end') return 'RIGHT';
+      if (value === 'justify') return 'JUSTIFIED';
+      return 'LEFT';
+    }
+
+    function textDecoration(style) {
+      const value = `${style.textDecorationLine || ''} ${style.textDecoration || ''}`;
+      if (value.includes('line-through')) return 'STRIKETHROUGH';
+      if (value.includes('underline')) return 'UNDERLINE';
+      return 'NONE';
+    }
+
+    function transformedText(value, transform) {
+      if (transform === 'uppercase') return value.toUpperCase();
+      if (transform === 'lowercase') return value.toLowerCase();
+      if (transform === 'capitalize') return value.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+      return value;
+    }
+
+    function normalizeText(value, whiteSpace) {
+      if (/pre/.test(whiteSpace)) return value;
+      return value.replace(/[\t\n\r ]+/g, ' ');
+    }
+
+    function serializeTextNode(textNode, parentElement, state) {
+      if (state.count >= state.maxNodes) return null;
+      const style = state.window.getComputedStyle(parentElement);
+      let text = normalizeText(textNode.nodeValue || '', style.whiteSpace);
+      if (!text.trim()) return null;
+      text = transformedText(text, style.textTransform);
+      const range = state.doc.createRange();
+      range.selectNodeContents(textNode);
+      const rect = range.getBoundingClientRect();
+      range.detach();
+      if (rect.width <= 0 || rect.height <= 0 || rect.bottom < 0 || rect.top > state.height) return null;
+      state.count += 1;
+      return {
+        kind: 'text',
+        name: 'Text',
+        ...rectSpec(rect),
+        text,
+        color: parseCssColor(style.color),
+        fontFamily: style.fontFamily || 'Inter',
+        fontSize: px(style.fontSize, 16),
+        fontWeight: parseInt(style.fontWeight, 10) || ({ normal: 400, bold: 700 }[style.fontWeight] || 400),
+        italic: style.fontStyle === 'italic' || style.fontStyle === 'oblique',
+        letterSpacing: style.letterSpacing === 'normal' ? 0 : px(style.letterSpacing),
+        lineHeight: style.lineHeight === 'normal' ? px(style.fontSize, 16) * 1.2 : px(style.lineHeight, px(style.fontSize, 16) * 1.2),
+        align: textAlign(style.textAlign),
+        decoration: textDecoration(style),
+        opacity: 1,
+      };
+    }
+
+    function serializeControlText(element, style, rect, state) {
+      const value = element.value || element.getAttribute('placeholder') || '';
+      if (!String(value).trim() || state.count >= state.maxNodes) return null;
+      state.count += 1;
+      const left = px(style.paddingLeft, 4) + px(style.borderLeftWidth, 0);
+      const right = px(style.paddingRight, 4) + px(style.borderRightWidth, 0);
+      const top = px(style.paddingTop, 2) + px(style.borderTopWidth, 0);
+      return {
+        kind: 'text',
+        name: 'Control text',
+        x: rect.left + left,
+        y: rect.top + top,
+        width: Math.max(1, rect.width - left - right),
+        height: Math.max(1, rect.height - top - px(style.paddingBottom, 2)),
+        text: String(value),
+        color: parseCssColor(style.color),
+        fontFamily: style.fontFamily || 'Inter',
+        fontSize: px(style.fontSize, 16),
+        fontWeight: parseInt(style.fontWeight, 10) || 400,
+        italic: style.fontStyle === 'italic' || style.fontStyle === 'oblique',
+        letterSpacing: style.letterSpacing === 'normal' ? 0 : px(style.letterSpacing),
+        lineHeight: style.lineHeight === 'normal' ? px(style.fontSize, 16) * 1.2 : px(style.lineHeight),
+        align: textAlign(style.textAlign),
+        decoration: textDecoration(style),
+        opacity: 1,
+      };
+    }
+
+    async function serializeImage(element, style, rect, state) {
+      if (state.count >= state.maxNodes) return null;
+      try {
+        const bytes = await imageElementToPng(element);
+        state.count += 1;
+        return {
+          kind: 'image',
+          name: nodeName(element),
+          ...rectSpec(rect),
+          bytes,
+          fit: style.objectFit === 'contain' || style.objectFit === 'scale-down' ? 'FIT' : style.objectFit === 'cover' ? 'CROP' : 'FILL',
+          radius: parseRadius(style),
+          opacity: px(style.opacity, 1),
+        };
+      } catch (_error) {
+        state.warnings.add(`Could not import image ${element.getAttribute('alt') || element.getAttribute('src') || ''}.`);
+        return null;
+      }
+    }
+
+    async function serializeElement(element, state) {
+      if (state.count >= state.maxNodes) return [];
+      const style = state.window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || px(style.opacity, 1) <= 0) return [];
+      if (['SCRIPT', 'STYLE', 'LINK', 'META', 'NOSCRIPT', 'TEMPLATE'].includes(element.tagName)) return [];
+
+      if (style.display === 'contents') {
+        return serializeChildNodes(element, state);
+      }
+
+      const rect = element.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0 || rect.bottom < 0 || rect.top > state.height) return [];
+
+      if (element.tagName === 'IMG' || element.tagName === 'CANVAS') {
+        const image = await serializeImage(element, style, rect, state);
+        return image ? [image] : [];
+      }
+
+      if (element.tagName === 'SVG') {
+        state.count += 1;
+        return [{
+          kind: 'svg',
+          name: nodeName(element),
+          ...rectSpec(rect),
+          markup: new XMLSerializer().serializeToString(element),
+          opacity: px(style.opacity, 1),
+        }];
+      }
+
+      state.count += 1;
+      let backgroundImageBytes = null;
+      const backgroundDataUrl = extractDataUrl(style.backgroundImage);
+      if (backgroundDataUrl) {
+        try { backgroundImageBytes = await dataImageToSupportedBytes(backgroundDataUrl); }
+        catch (_error) { state.warnings.add('A CSS background image was skipped.'); }
+      }
+
+      const borderWidths = [
+        px(style.borderTopWidth),
+        px(style.borderRightWidth),
+        px(style.borderBottomWidth),
+        px(style.borderLeftWidth),
+      ];
+      const overflowValues = [style.overflow, style.overflowX, style.overflowY];
+      const descriptor = {
+        kind: 'frame',
+        name: nodeName(element),
+        ...rectSpec(rect),
+        opacity: px(style.opacity, 1),
+        background: parseCssColor(style.backgroundColor),
+        backgroundImageBytes,
+        backgroundImageFit: style.backgroundSize === 'contain' ? 'FIT' : 'FILL',
+        gradient: parseGradient(style.backgroundImage),
+        borderColor: parseCssColor(style.borderTopColor),
+        borderWidth: Math.max(...borderWidths),
+        radius: parseRadius(style),
+        clipsContent: overflowValues.some((value) => ['hidden', 'clip', 'scroll', 'auto'].includes(value)),
+        shadow: parseShadow(style.boxShadow),
+        children: [],
+      };
+
+      descriptor.children = await serializeChildNodes(element, state);
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName)) {
+        const controlText = serializeControlText(element, style, rect, state);
+        if (controlText) descriptor.children.push(controlText);
+      }
+      return [descriptor];
+    }
+
+    async function serializeChildNodes(element, state) {
+      const children = [];
+      const nodes = [];
+      if (element.shadowRoot) nodes.push(...Array.from(element.shadowRoot.childNodes));
+      nodes.push(...Array.from(element.childNodes));
+      for (const child of nodes) {
+        if (state.count >= state.maxNodes) break;
+        if (child.nodeType === Node.ELEMENT_NODE) {
+          children.push(...await serializeElement(child, state));
+        } else if (child.nodeType === Node.TEXT_NODE) {
+          const parent = child.parentElement || element;
+          const text = serializeTextNode(child, parent, state);
+          if (text) children.push(text);
+        }
+      }
+      return children;
+    }
+
+    function scaleSerializedNode(node, scale) {
+      if (!node || scale === 1) return node;
+      for (const key of ['x','y','width','height','borderWidth']) {
+        if (typeof node[key] === 'number') node[key] *= scale;
+      }
+      if (Array.isArray(node.radius)) node.radius = node.radius.map((value) => value * scale);
+      if (node.shadow) {
+        node.shadow.offsetX *= scale;
+        node.shadow.offsetY *= scale;
+        node.shadow.blur *= scale;
+        node.shadow.spread *= scale;
+      }
+      if (node.kind === 'text') {
+        node.fontSize *= scale;
+        node.lineHeight *= scale;
+        node.letterSpacing *= scale;
+      }
+      if (node.kind === 'frame') node.children = (node.children || []).map((child) => scaleSerializedNode(child, scale));
+      return node;
+    }
+
+    async function serializeDocument(render, maxNodes) {
+      const body = render.doc.body || render.doc.documentElement;
+      const win = render.frame.contentWindow;
+      if (!win) throw new Error('Could not access the render window.');
+      const state = {
+        doc: render.doc,
+        window: win,
+        height: render.height,
+        maxNodes,
+        count: 0,
+        warnings: new Set(),
+      };
+      let children = await serializeChildNodes(body, state);
+      if (render.geometryScale && render.geometryScale !== 1) children = children.map((node) => scaleSerializedNode(node, render.geometryScale));
+      if (state.count >= maxNodes) state.warnings.add(`The internal ${maxNodes}-layer safety limit was reached; the rest of the DOM was skipped.`);
+      if (render.wasClipped) state.warnings.add(`The page exceeded the technical height of ${render.height}px.`);
+      if (render.geometryScale && Math.abs(render.geometryScale - 1) > .002) state.warnings.add(`Viewport was corrected from ${Math.round(render.actualViewportWidth)} to ${render.width}px.`);
+      const unresolvedTemplates = detectUnrenderedTemplates(render.doc);
+      if (unresolvedTemplates.length) state.warnings.add('Some template expressions were not rendered. Include the page JavaScript files with the HTML, or make sure its CDN scripts are reachable.');
+
+      const bodyStyle = win.getComputedStyle(body);
+      const htmlStyle = win.getComputedStyle(render.doc.documentElement);
+      let background = parseCssColor(bodyStyle.backgroundColor);
+      if (background.a <= 0) background = parseCssColor(htmlStyle.backgroundColor);
+      return { children, background, warnings: Array.from(state.warnings) };
+    }
+
+    function escapeXml(value) {
+      return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function captureDocument(render) {
+      const clone = render.doc.documentElement.cloneNode(true);
+      clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      const serialized = new XMLSerializer().serializeToString(clone);
+      const svg = `<?xml version="1.0" encoding="UTF-8"?>\n` +
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${render.width}" height="${render.height}" viewBox="0 0 ${render.width} ${render.height}">` +
+        `<foreignObject x="0" y="0" width="100%" height="100%">${serialized}</foreignObject></svg>`;
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      try {
+        const image = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('The browser could not render the HTML as PNG.'));
+          img.src = url;
+        });
+        const scale = Math.min(1, 4096 / render.width, 4096 / render.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(render.width * scale));
+        canvas.height = Math.max(1, Math.round(render.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable.');
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return await canvasToPngBytes(canvas);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+
+    function cleanText(value) {
+      return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function semanticElementName(element) {
+      const tag = element.tagName.toLowerCase();
+      const own = Array.from(element.childNodes || []).filter((node) => node.nodeType === Node.TEXT_NODE).map((node) => node.nodeValue || '').join(' ');
+      const text = cleanText(own || element.getAttribute('aria-label') || element.getAttribute('title') || '');
+      const hint = cleanText(element.getAttribute('data-name') || element.id || Array.from(element.classList || [])[0] || '').replace(/[._-]+/g, ' ');
+      const short = (value) => value.length > 64 ? `${value.slice(0,61)}…` : value;
+      if (/^h[1-6]$/.test(tag)) return `${tag.toUpperCase()} · ${short(text || hint || 'Heading')}`;
+      if (tag === 'a') return `Link · ${short(text || hint || 'Untitled')}`;
+      if (tag === 'button') return `Button · ${short(text || hint || 'Untitled')}`;
+      if (tag === 'img') return `Image · ${short(element.getAttribute('alt') || hint || 'Untitled')}`;
+      const names = { header:'Header', footer:'Footer', nav:'Navigation', main:'Main', section:'Section', article:'Article', form:'Form', ul:'List', ol:'List', li:'Item' };
+      if (names[tag]) return `${names[tag]}${hint ? ` · ${short(hint)}` : ''}`;
+      if (/(card|tile|project|service|price|pricing)/i.test(`${element.id} ${element.className}`)) return `Card${hint ? ` · ${short(hint)}` : ''}`;
+      if (/(hero|banner)/i.test(`${element.id} ${element.className}`)) return `Hero${hint ? ` · ${short(hint)}` : ''}`;
+      if (/(grid|row|columns?)/i.test(`${element.id} ${element.className}`)) return `Grid${hint ? ` · ${short(hint)}` : ''}`;
+      return hint ? `Container · ${short(hint)}` : 'Container';
+    }
+
+    function nodeName(element) { return semanticElementName(element); }
+
+    function groupLineRects(rects) {
+      const lines = [];
+      for (const rect of rects) {
+        const line = lines.find((item) => Math.abs(item.top - rect.top) <= 1.5);
+        if (line) {
+          line.left = Math.min(line.left, rect.left);
+          line.right = Math.max(line.right, rect.right);
+          line.bottom = Math.max(line.bottom, rect.bottom);
+        } else {
+          lines.push({ left:rect.left, right:rect.right, top:rect.top, bottom:rect.bottom });
+        }
+      }
+      return lines.sort((a,b) => a.top - b.top);
+    }
+
+    function measureVisualLineTexts(textNode, style, lineRects, doc) {
+      const raw = textNode.nodeValue || '';
+      const output = lineRects.map(() => '');
+      let pendingSpace = false;
+      const tokenPattern = /\s+|\S+/gu;
+      let match;
+      while ((match = tokenPattern.exec(raw))) {
+        const token = match[0];
+        if (/^\s+$/u.test(token)) {
+          pendingSpace = true;
+          continue;
+        }
+        const range = doc.createRange();
+        try {
+          range.setStart(textNode, match.index);
+          range.setEnd(textNode, match.index + token.length);
+          const tokenRects = Array.from(range.getClientRects()).filter((rect) => rect.width > .05 && rect.height > .05);
+          if (!tokenRects.length) continue;
+          const tokenTop = tokenRects[0].top;
+          let lineIndex = 0;
+          let bestDistance = Infinity;
+          for (let index = 0; index < lineRects.length; index += 1) {
+            const distance = Math.abs(lineRects[index].top - tokenTop);
+            if (distance < bestDistance) { bestDistance = distance; lineIndex = index; }
+          }
+          if (pendingSpace && output[lineIndex]) output[lineIndex] += ' ';
+          output[lineIndex] += token;
+          pendingSpace = false;
+        } finally {
+          range.detach();
+        }
+      }
+      return output
+        .map((line) => transformedText(line.trim(), style.textTransform))
+        .filter((line) => line.length > 0);
+    }
+
+    function serializeTextNode(textNode, parentElement, state) {
+      if (state.count >= state.maxNodes) return null;
+      const style = state.window.getComputedStyle(parentElement);
+      const originalText = normalizeText(textNode.nodeValue || '', style.whiteSpace).trim();
+      if (!originalText) return null;
+      const range = state.doc.createRange();
+      range.selectNodeContents(textNode);
+      const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > .05 && rect.height > .05);
+      const union = range.getBoundingClientRect();
+      range.detach();
+      if (!rects.length || union.bottom < 0 || union.top > state.height) return null;
+
+      const lines = groupLineRects(rects);
+      const lineTexts = measureVisualLineTexts(textNode, style, lines, state.doc);
+      const transformedOriginal = transformedText(originalText, style.textTransform);
+      const text = lineTexts.length ? lineTexts.join('\n') : transformedOriginal;
+      const minLeft = Math.min(...lines.map((line) => line.left));
+      const maxRight = Math.max(...lines.map((line) => line.right));
+      const first = lines[0];
+      const last = lines[lines.length - 1];
+      const safety = Math.min(6, Math.max(1.5, px(style.fontSize,16) * .1));
+
+      state.count += 1;
+      return {
+        kind:'text', name:transformedOriginal, x:minLeft, y:first.top,
+        width:Math.max(1, maxRight-minLeft+safety), height:Math.max(1,last.bottom-first.top),
+        text, originalText:transformedOriginal,
+        color:parseCssColor(style.color), fontFamily:style.fontFamily || 'Inter', fontSize:px(style.fontSize,16),
+        fontWeight:parseInt(style.fontWeight,10) || ({normal:400,bold:700}[style.fontWeight] || 400), italic:style.fontStyle === 'italic' || style.fontStyle === 'oblique',
+        letterSpacing:style.letterSpacing === 'normal' ? 0 : px(style.letterSpacing), lineHeight:style.lineHeight === 'normal' ? px(style.fontSize,16)*1.2 : px(style.lineHeight,px(style.fontSize,16)*1.2),
+        align:textAlign(style.textAlign), decoration:textDecoration(style), opacity:1,
+        resizeMode:'AUTO_WIDTH', lineCount:lines.length, lockedLines:true,
+      };
+    }
+
+    function serializeControlText(element, style, rect, state) {
+      const value = element.value || element.getAttribute('placeholder') || '';
+      if (!String(value).trim() || state.count >= state.maxNodes) return null;
+      state.count += 1;
+      const left = px(style.paddingLeft,4) + px(style.borderLeftWidth,0);
+      const right = px(style.paddingRight,4) + px(style.borderRightWidth,0);
+      const top = px(style.paddingTop,2) + px(style.borderTopWidth,0);
+      return { kind:'text', name:String(value), x:rect.left+left, y:rect.top+top, width:Math.max(1,rect.width-left-right), height:Math.max(1,rect.height-top-px(style.paddingBottom,2)), text:String(value), color:parseCssColor(style.color), fontFamily:style.fontFamily||'Inter', fontSize:px(style.fontSize,16), fontWeight:parseInt(style.fontWeight,10)||400, italic:style.fontStyle==='italic'||style.fontStyle==='oblique', letterSpacing:style.letterSpacing==='normal'?0:px(style.letterSpacing), lineHeight:style.lineHeight==='normal'?px(style.fontSize,16)*1.2:px(style.lineHeight), align:textAlign(style.textAlign), decoration:textDecoration(style), opacity:1, resizeMode:'AUTO_HEIGHT', lineCount:1 };
+    }
+
+    function selectedPresets() {
+      return Array.from(document.querySelectorAll('input[name="preset"]:checked')).map((input) => ({ width:Number(input.value), label:input.dataset.label }));
+    }
+
+    function base64ToBytes(value) {
+      const binary = atob(value || '');
+      const bytes = new Uint8Array(binary.length);
+      for (let index=0; index<binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      return bytes;
+    }
+
+    function hydrateHelperNodes(nodes) {
+      for (const node of nodes || []) {
+        if (node.bytesBase64) { node.bytes = base64ToBytes(node.bytesBase64); delete node.bytesBase64; }
+        if (node.backgroundImageBase64) { node.backgroundImageBytes = base64ToBytes(node.backgroundImageBase64); delete node.backgroundImageBase64; }
+        if (node.kind === 'frame') hydrateHelperNodes(node.children || []);
+      }
+      return nodes || [];
+    }
+
+    function flattenTechnicalFrames(nodes) {
+      const result = [];
+      for (const node of nodes || []) {
+        if (node.kind === 'frame') {
+          node.children = flattenTechnicalFrames(node.children || []);
+          const backgroundAlpha = node.background?.a || 0;
+          const visual = backgroundAlpha > 0 || (node.borderWidth || 0) > 0 || node.shadow || node.backgroundImageBytes || node.gradient || node.clipsContent || (node.opacity ?? 1) < .999;
+          if (!visual && node.name === 'Container') { result.push(...node.children); continue; }
+        }
+        result.push(node);
+      }
+      return result;
+    }
+
+    async function fetchJson(url, options = {}, timeoutMs = 120000) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { ...options, signal:controller.signal });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`);
+        return payload;
+      } finally { clearTimeout(timeout); }
+    }
+
+    async function checkHelper() {
+      helperState.textContent = 'Checking the Render server…';
+      helperState.className = 'helper-state muted';
+      try {
+        const origin = getServerOrigin();
+        serverUrlInput.value = origin;
+        try { localStorage.setItem('html-to-figma-server-url', origin); } catch (_error) {}
+        const result = await fetchJson(`${origin}/health`, { headers:{ 'X-API-Key':getServerKey() } }, 45000);
+        const ready = result.ok !== false && result.browserReady !== false;
+        helperState.textContent = ready ? 'Server is online and Chromium is ready.' : 'Server responded, but Chromium is not ready.';
+        helperState.className = `helper-state ${ready ? 'success' : 'error'}`;
+        return ready;
+      } catch (error) {
+        helperState.textContent = `Connection failed: ${error instanceof Error ? error.message : String(error)}`;
+        helperState.className = 'helper-state error';
+        return false;
+      }
+    }
+
+    function postToFigma(message) {
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          if (figmaWaiter?.reject === reject) figmaWaiter = null;
+          reject(new Error('Figma took too long to create the layers.'));
+        }, 300000);
+        figmaWaiter = {
+          resolve:(value) => { clearTimeout(timeout); figmaWaiter = null; resolve(value); },
+          reject:(error) => { clearTimeout(timeout); figmaWaiter = null; reject(error); },
+        };
+        parent.postMessage({ pluginMessage:message }, '*');
+      });
+    }
+
+    async function importUrlPreset(url, preset, options, batch) {
+      const origin = getServerOrigin();
+      setStatus(`Opening the website in Chromium: ${preset.label}…`, 'normal', 8 + batch.index / batch.total * 42);
+      const result = await fetchJson(`${origin}/render`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-API-Key':getServerKey() },
+        body:JSON.stringify({ url, width:preset.width }),
+      }, 300000);
+      currentWarnings.push(...(result.warnings || []));
+      if (!result.html) throw new Error('The server returned an empty page.');
+
+      setStatus(`Preparing editable layers: ${preset.label}…`, 'normal', 46 + batch.index / batch.total * 28);
+      const parsed = new DOMParser().parseFromString(result.html, 'text/html');
+      const render = await createRenderFrame(parsed, preset.width);
+      const serialized = await serializeDocument(render, options.maxNodes);
+      currentWarnings.push(...serialized.warnings);
+      await postToFigma({
+        type:'import-editable',
+        sourceName:result.sourceName || result.title || new URL(url).hostname,
+        width:render.width,
+        height:render.height,
+        rootStyle:{ background:serialized.background },
+        children:serialized.children,
+        batch,
+        uiWarnings:[...(result.warnings || []), ...serialized.warnings],
+      });
+      cleanupRenderFrame();
+    }
+
+    async function importLocalPreset(prepared, htmlFile, htmlText, preset, options, batch) {
+      setStatus(`Rendering local HTML: ${preset.label}…`, 'normal', 8 + batch.index / batch.total * 70);
+      const htmlRecord = prepared.records.find((record) => record.file === htmlFile);
+      const sanitized = sanitizeAndInline(htmlText, prepared.byPath, prepared.records, htmlRecord?.path || htmlFile.name);
+      const render = await createRenderFrame(sanitized, preset.width);
+      if (options.mode === 'screenshot') {
+        const bytes = await captureDocument(render);
+        await postToFigma({ type:'import-screenshot', sourceName:htmlFile.name, width:render.width, height:render.height, tiles:[{x:0,y:0,width:render.width,height:render.height,bytes}], batch });
+      } else {
+        const result = await serializeDocument(render, options.maxNodes);
+        const children = result.children;
+        currentWarnings.push(...result.warnings);
+        await postToFigma({ type:'import-editable', sourceName:htmlFile.name, width:render.width, height:render.height, rootStyle:{background:result.background}, children, batch, uiWarnings:result.warnings });
+      }
+      cleanupRenderFrame();
+    }
+
+    async function runImport() {
+      const presets = selectedPresets();
+      if (!presets.length) { setStatus('Select at least one viewport size.', 'error', 0); return; }
+      const options = {
+        mode:'editable',
+        maxNodes:100000,
+        cleanTree:false,
+      };
+      let prepared = null;
+      let htmlFile = null;
+      let htmlText = '';
+      let url = '';
+      if (sourceMode === 'local') {
+        htmlFile = selectedFiles.find((file) => /\.html?$/i.test(file.name));
+        if (!htmlFile) { setStatus('Select an .html or .htm file.', 'error', 0); return; }
+      } else {
+        try { url = new URL(siteUrlInput.value.trim()).href; }
+        catch (_error) { setStatus('Enter a complete URL, such as https://example.com.', 'error', 0); return; }
+        if (!/^https?:/i.test(url)) { setStatus('Only http:// and https:// URLs are allowed.', 'error', 0); return; }
+      }
+
+      setBusy(true);
+      currentWarnings = [];
+      const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      try {
+        if (sourceMode === 'url') {
+          const ready = await checkHelper();
+          if (!ready) throw new Error('The Render server is not ready. Check its address and wait until the service is Live.');
+        } else {
+          setStatus('Reading local files…','normal',3);
+          prepared = await prepareFiles(selectedFiles);
+          const htmlRecord = prepared.records.find((record) => record.file === htmlFile);
+          htmlText = htmlRecord?.text || '';
+          if (!htmlText) throw new Error('The HTML file is empty or unreadable.');
+        }
+
+        for (let index=0; index<presets.length; index += 1) {
+          const preset = presets[index];
+          const batch = { id:batchId, index, total:presets.length, presetLabel:preset.label };
+          if (sourceMode === 'url') await importUrlPreset(url,preset,options,batch);
+          else await importLocalPreset(prepared,htmlFile,htmlText,preset,options,batch);
+        }
+        const uniqueWarnings = [...new Set(currentWarnings.filter(Boolean))];
+        const suffix = uniqueWarnings.length ? `\n\nWarnings:\n• ${uniqueWarnings.join('\n• ')}` : '';
+        setStatus(`Done: imported ${presets.length} version(s).${suffix}`, uniqueWarnings.length ? 'normal' : 'success', 100);
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), 'error', 0);
+      } finally {
+        setBusy(false);
+        cleanupRenderFrame();
+      }
+    }
+
+    window.onmessage = (event) => {
+      const message = event.data.pluginMessage;
+      if (!message) return;
+      if (message.type === 'progress') {
+        const percent = message.total ? 72 + (message.done/message.total)*20 : 80;
+        setStatus(`Creating Figma layers: ${message.done} / ${message.total}`, 'normal', percent);
+      } else if (message.type === 'complete') {
+        currentWarnings.push(...(message.warnings || []));
+        figmaWaiter?.resolve(message);
+      } else if (message.type === 'error') {
+        figmaWaiter?.reject(new Error(message.message || 'Import failed.'));
+      }
+    };
+
+    try { serverUrlInput.value = localStorage.getItem('html-to-figma-server-url') || ''; } catch (_error) {}
+    try { serverKeyInput.value = localStorage.getItem('html-to-figma-server-key') || ''; } catch (_error) {}
+    setSourceMode('url');
+    updateModeUi();
+  </script>
+</body>
+</html>
